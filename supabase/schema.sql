@@ -13,14 +13,18 @@ create table if not exists public.schools (
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   full_name text not null,
-  school_id uuid not null references public.schools(id),
-  school_number text not null,
+  school_id uuid references public.schools(id),
+  school_number text,
   role text not null default 'teacher'
     check (role in ('teacher', 'counselor', 'deputy_principal', 'principal', 'admin', 'super_admin')),
   job_title text,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  constraint profiles_school_assignment_check check (
+    (role = 'super_admin' and school_id is null and school_number is null)
+    or (role <> 'super_admin' and school_id is not null and school_number is not null)
+  )
 );
 
 create index if not exists profiles_school_id_idx on public.profiles(school_id);
