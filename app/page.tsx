@@ -76,10 +76,10 @@ const works = [
 ];
 
 const teachers = [
-  { name: "محمد العوضي", role: "معلم الذكاء الاصطناعي والتكنولوجيا", works: 24, initiatives: 12, avatar: "https://i.pravatar.cc/160?img=12" },
-  { name: "أحمد محمد", role: "معلم الحوسبة", works: 18, initiatives: 7, avatar: "https://i.pravatar.cc/160?img=11" },
-  { name: "خالد سالم", role: "معلم العلوم", works: 31, initiatives: 9, avatar: "https://i.pravatar.cc/160?img=13" },
-  { name: "سعيد راشد", role: "معلم الرياضيات", works: 16, initiatives: 5, avatar: "https://i.pravatar.cc/160?img=14" },
+  { name: "معلم 1", role: "معلم الذكاء الاصطناعي والتكنولوجيا", works: 24, initiatives: 12, avatar: "https://i.pravatar.cc/160?img=12" },
+  { name: "معلم 2", role: "معلم الحوسبة", works: 18, initiatives: 7, avatar: "https://i.pravatar.cc/160?img=11" },
+  { name: "معلم 3", role: "معلم العلوم", works: 31, initiatives: 9, avatar: "https://i.pravatar.cc/160?img=13" },
+  { name: "معلم 4", role: "معلم الرياضيات", works: 16, initiatives: 5, avatar: "https://i.pravatar.cc/160?img=14" },
 ];
 
 const navItems: { id: SectionId; label: string; icon: typeof LayoutGrid }[] = [
@@ -146,9 +146,9 @@ export default function Home() {
             </div>
           </div>
           <button className="profile-mini" onClick={() => notify("ملف المستخدم جاهز للتخصيص")}>
-            <img src="https://i.pravatar.cc/80?img=12" alt="محمد العوضي" />
+            <img src="https://i.pravatar.cc/80?img=12" alt="ملف المعلم" />
             <div>
-              <strong>محمد العوضي</strong>
+              <strong>ملف المعلم</strong>
               <span>{role}</span>
             </div>
             <MoreHorizontal size={17} />
@@ -176,8 +176,8 @@ export default function Home() {
               <Bell size={20} />
               <i />
             </button>
-            <button className="avatar-button" onClick={() => notify("مرحبًا محمد")}>
-              <img src="https://i.pravatar.cc/80?img=12" alt="صورة المعلم" />
+            <button className="avatar-button" onClick={() => notify("مرحبًا بك")}>
+              <img src="https://i.pravatar.cc/80?img=12" alt="الصورة الشخصية" />
             </button>
           </div>
         </header>
@@ -259,7 +259,7 @@ export default function Home() {
 
           {active === "teachers" && (
             <>
-              <PageTitle title="معلمو مدرسة شمل" sub="استعرض ملفات وإنجازات الزملاء المرتبطين بالمدرسة 9037." />
+              <PageTitle title="معلمو مدرسة شمل" sub="استعرض ملفات وإنجازات المعلمين المرتبطين بالمدرسة 9037." />
               <div className="school-banner">
                 <div className="school-hero-logo"><School size={27} /></div>
                 <div><strong>مدرسة شمل للبنين</strong><span>9037 · 24 مستخدمًا · 487 عملًا موثقًا</span></div>
@@ -313,7 +313,7 @@ export default function Home() {
               <div className="settings-grid">
                 <div className="settings-card">
                   <h3>بيانات المعلم</h3>
-                  <label>الاسم<input defaultValue="محمد العوضي" /></label>
+                  <label>الاسم<input placeholder="أدخل اسم المعلم" /></label>
                   <label>المسمى الوظيفي<input defaultValue="معلم الذكاء الاصطناعي والتكنولوجيا" /></label>
                   <label>نبذة مهنية<textarea defaultValue="أوظف الذكاء الاصطناعي والتكنولوجيا لصناعة تجارب تعلم أكثر تأثيرًا." /></label>
                 </div>
