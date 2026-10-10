@@ -16,14 +16,14 @@ create table if not exists public.profiles (
   school_id uuid references public.schools(id),
   school_number text,
   role text not null default 'teacher'
-    check (role in ('teacher', 'counselor', 'deputy_principal', 'principal', 'admin', 'super_admin')),
+    check (role in ('teacher', 'principal', 'deputy_principal', 'counselor', 'admin')),
   job_title text,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint profiles_school_assignment_check check (
-    (role = 'super_admin' and school_id is null and school_number is null)
-    or (role <> 'super_admin' and school_id is not null and school_number is not null)
+    (role = 'admin' and school_id is null and school_number is null)
+    or (role <> 'admin' and school_id is not null and school_number is not null)
   )
 );
 
@@ -78,12 +78,15 @@ alter table public.portfolio_works enable row level security;
 drop policy if exists "Users can read own profile" on public.profiles;
 drop policy if exists "School leaders can read profiles" on public.profiles;
 drop policy if exists "Super admins manage profiles" on public.profiles;
+drop policy if exists "Global admins manage profiles" on public.profiles;
 drop policy if exists "Read allowed schools" on public.schools;
 drop policy if exists "Super admins manage schools" on public.schools;
+drop policy if exists "Global admins manage schools" on public.schools;
 drop policy if exists "Owners and school leaders read portfolio works" on public.portfolio_works;
 drop policy if exists "Owners insert their own portfolio works" on public.portfolio_works;
 drop policy if exists "Owners update their own draft works" on public.portfolio_works;
 drop policy if exists "Super admins manage all portfolio works" on public.portfolio_works;
+drop policy if exists "Global admins manage all portfolio works" on public.portfolio_works;
 
 create policy "Users can read own profile"
   on public.profiles for select to authenticated
@@ -93,37 +96,37 @@ create policy "School leaders can read profiles"
   on public.profiles for select to authenticated
   using (
     school_id = (select public.current_profile_school_id())
-    and (select public.current_profile_role()) in ('principal', 'deputy_principal', 'admin')
+    and (select public.current_profile_role()) in ('principal', 'deputy_principal')
   );
 
-create policy "Super admins manage profiles"
+create policy "Global admins manage profiles"
   on public.profiles for all to authenticated
-  using ((select public.current_profile_role()) = 'super_admin')
-  with check ((select public.current_profile_role()) = 'super_admin');
+  using ((select public.current_profile_role()) = 'admin')
+  with check ((select public.current_profile_role()) = 'admin');
 
 create policy "Read allowed schools"
   on public.schools for select to authenticated
   using (
     id = (select public.current_profile_school_id())
-    or (select public.current_profile_role()) = 'super_admin'
+    or (select public.current_profile_role()) = 'admin'
   );
 
-create policy "Super admins manage schools"
+create policy "Global admins manage schools"
   on public.schools for all to authenticated
-  using ((select public.current_profile_role()) = 'super_admin')
-  with check ((select public.current_profile_role()) = 'super_admin');
+  using ((select public.current_profile_role()) = 'admin')
+  with check ((select public.current_profile_role()) = 'admin');
 
--- Teachers and counselors can read their own works; school leaders can read works
--- only from their own school; the global super admin can manage all works.
+-- Teachers and counselors can read their own works. Principals and deputy principals
+-- can read works only within their assigned school. The global admin can manage all schools.
 create policy "Owners and school leaders read portfolio works"
   on public.portfolio_works for select to authenticated
   using (
     owner_id = (select auth.uid())
     or (
       school_id = (select public.current_profile_school_id())
-      and (select public.current_profile_role()) in ('principal', 'deputy_principal', 'admin')
+      and (select public.current_profile_role()) in ('principal', 'deputy_principal')
     )
-    or (select public.current_profile_role()) = 'super_admin'
+    or (select public.current_profile_role()) = 'admin'
   );
 
 create policy "Owners insert their own portfolio works"
@@ -147,11 +150,12 @@ create policy "Owners update their own draft works"
     and status in ('draft', 'returned')
   );
 
-create policy "Super admins manage all portfolio works"
+create policy "Global admins manage all portfolio works"
   on public.portfolio_works for all to authenticated
-  using ((select public.current_profile_role()) = 'super_admin')
-  with check ((select public.current_profile_role()) = 'super_admin');
+  using ((select public.current_profile_role()) = 'admin')
+  with check ((select public.current_profile_role()) = 'admin');
 
--- Intentionally no public signup and no self-service role changes.
+-- No public signup and no self-service role changes.
 -- Create Auth users through trusted admin provisioning and create a matching profiles row.
+-- The global admin account must be provisioned through Supabase Auth and assigned role=admin.
 -- Never expose service_role/secret keys in browser code or NEXT_PUBLIC_* variables.
