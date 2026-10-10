@@ -200,8 +200,8 @@ export default function Home() {
               <Bell size={20} />
               <i />
             </button>
-            <button className="avatar-button" onClick={() => notify("مرحبًا بك")}>
-              <img src="https://i.pravatar.cc/80?img=12" alt="الصورة الشخصية" />
+            <button className="logout-button" onClick={logout} disabled={loggingOut}>
+              <LogOut size={16} />{loggingOut ? "جارٍ الخروج..." : "تسجيل الخروج"}
             </button>
           </div>
         </header>
