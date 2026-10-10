@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import {
   ArrowUpRight,
   BarChart3,
@@ -13,6 +14,7 @@ import {
   LayoutGrid,
   Lightbulb,
   MoreHorizontal,
+  LogOut,
   Plus,
   School,
   Search,
@@ -24,7 +26,7 @@ import {
   X,
 } from "lucide-react";
 
-type Role = "معلم" | "مرشد" | "إداري" | "Super Admin";
+type Role = "معلم" | "مرشد" | "مدير مدرسة" | "إداري" | "Super Admin";
 type SectionId = "overview" | "works" | "teachers" | "achievements" | "assistant" | "settings";
 
 const categories = [
@@ -92,7 +94,37 @@ const navItems: { id: SectionId; label: string; icon: typeof LayoutGrid }[] = [
 ];
 
 export default function Home() {
-  const [role, setRole] = useState<Role>("إداري");
+  const [role, setRole] = useState<Role>("معلم");
+  const [profileName, setProfileName] = useState("حساب المدرسة");
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data } = await supabase.from("profiles").select("full_name, role").eq("id", user.id).maybeSingle();
+        if (data?.full_name) setProfileName(data.full_name);
+        const roleLabels: Record<string, Role> = { teacher: "معلم", counselor: "مرشد", principal: "مدير مدرسة", admin: "إداري", super_admin: "Super Admin" };
+        if (data?.role && roleLabels[data.role]) setRole(roleLabels[data.role]);
+        else setProfileName(user.email || "حساب المدرسة");
+      } catch {
+        setProfileName("حساب المدرسة");
+      }
+    };
+    void loadProfile();
+  }, []);
+
+  const logout = async () => {
+    setLoggingOut(true);
+    try {
+      const supabase = createClient();
+      await supabase.auth.signOut();
+    } finally {
+      window.location.assign("/login");
+    }
+  };
   const [active, setActive] = useState<SectionId>("overview");
   const [showAdd, setShowAdd] = useState(false);
   const [toast, setToast] = useState("");
@@ -148,7 +180,7 @@ export default function Home() {
           <button className="profile-mini" onClick={() => notify("ملف المستخدم جاهز للتخصيص")}>
             <img src="https://i.pravatar.cc/80?img=12" alt="ملف المعلم" />
             <div>
-              <strong>ملف المعلم</strong>
+              <strong>{profileName}</strong>
               <span>{role}</span>
             </div>
             <MoreHorizontal size={17} />
@@ -163,15 +195,7 @@ export default function Home() {
             <input aria-label="البحث" placeholder="ابحث في الأعمال، المعلمين، المبادرات..." />
           </label>
           <div className="top-actions">
-            <div className="role-picker">
-              <span>الدور</span>
-              <select value={role} onChange={(e) => setRole(e.target.value as Role)}>
-                <option>معلم</option>
-                <option>مرشد</option>
-                <option>إداري</option>
-                <option>Super Admin</option>
-              </select>
-            </div>
+            <div className="authenticated-role"><ShieldCheck size={15} /><span>{role}</span></div>
             <button className="icon-button" onClick={() => notify("لا توجد إشعارات جديدة")}>
               <Bell size={20} />
               <i />
