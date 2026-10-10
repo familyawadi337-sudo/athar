@@ -106,7 +106,7 @@ export default function Home() {
         if (!user) return;
         const { data } = await supabase.from("profiles").select("full_name, role").eq("id", user.id).maybeSingle();
         if (data?.full_name) setProfileName(data.full_name);
-        const roleLabels: Record<string, Role> = { teacher: "معلم", counselor: "مرشد", deputy_principal: "نائب مدير", principal: "مدير مدرسة", admin: "إداري", super_admin: "Super Admin" };
+        const roleLabels: Record<string, Role> = { teacher: "معلم", counselor: "مرشد", deputy_principal: "نائب مدير", principal: "مدير مدرسة", admin: "أدمن كلي" };
         if (data?.role && roleLabels[data.role]) setRole(roleLabels[data.role]);
         else setProfileName(user.email || "حساب المدرسة");
       } catch {
