@@ -1,5 +1,5 @@
--- ATHAR authentication and school-scoped authorization schema.
--- Apply in the intended Supabase project only after verifying it is the correct project.
+-- ATHAR authentication, school roles, portfolio works, and row-level security.
+-- Apply only in the intended Supabase project after confirming its project URL.
 create extension if not exists pgcrypto;
 
 create table if not exists public.schools (
@@ -20,15 +20,32 @@ create table if not exists public.profiles (
   job_title text,
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  unique (school_id, school_number)
+  updated_at timestamptz not null default now()
 );
 
 create index if not exists profiles_school_id_idx on public.profiles(school_id);
 create index if not exists profiles_role_idx on public.profiles(role);
 create index if not exists profiles_school_role_idx on public.profiles(school_id, role);
+create index if not exists profiles_school_number_idx on public.profiles(school_number);
 
--- Security-definer helpers avoid recursive RLS queries against profiles.
+create table if not exists public.portfolio_works (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null references public.profiles(id) on delete cascade,
+  school_id uuid not null references public.schools(id) on delete cascade,
+  title text not null,
+  category text not null default 'مبادراتي',
+  description text not null default '',
+  evidence_urls text[] not null default '{}',
+  tags text[] not null default '{}',
+  status text not null default 'draft' check (status in ('draft', 'submitted', 'approved', 'returned')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists portfolio_works_owner_idx on public.portfolio_works(owner_id);
+create index if not exists portfolio_works_school_idx on public.portfolio_works(school_id);
+create index if not exists portfolio_works_status_idx on public.portfolio_works(status);
+
 create or replace function public.current_profile_school_id()
 returns uuid
 language sql stable security definer
@@ -52,19 +69,22 @@ grant execute on function public.current_profile_role() to authenticated;
 
 alter table public.schools enable row level security;
 alter table public.profiles enable row level security;
+alter table public.portfolio_works enable row level security;
 
 drop policy if exists "Users can read own profile" on public.profiles;
 drop policy if exists "School leaders can read profiles" on public.profiles;
 drop policy if exists "Super admins manage profiles" on public.profiles;
 drop policy if exists "Read allowed schools" on public.schools;
 drop policy if exists "Super admins manage schools" on public.schools;
+drop policy if exists "Owners and school leaders read portfolio works" on public.portfolio_works;
+drop policy if exists "Owners insert their own portfolio works" on public.portfolio_works;
+drop policy if exists "Owners update their own draft works" on public.portfolio_works;
+drop policy if exists "Super admins manage all portfolio works" on public.portfolio_works;
 
 create policy "Users can read own profile"
   on public.profiles for select to authenticated
   using (id = (select auth.uid()));
 
--- School principals, deputy principals and school admins can view profiles in their own school.
--- This is intentionally school-scoped; it does not grant access to work/portfolio tables by itself.
 create policy "School leaders can read profiles"
   on public.profiles for select to authenticated
   using (
@@ -72,7 +92,6 @@ create policy "School leaders can read profiles"
     and (select public.current_profile_role()) in ('principal', 'deputy_principal', 'admin')
   );
 
--- The global super admin can read and manage every profile, across all schools.
 create policy "Super admins manage profiles"
   on public.profiles for all to authenticated
   using ((select public.current_profile_role()) = 'super_admin')
@@ -90,6 +109,45 @@ create policy "Super admins manage schools"
   using ((select public.current_profile_role()) = 'super_admin')
   with check ((select public.current_profile_role()) = 'super_admin');
 
--- No public signup. Create Auth users through trusted admin provisioning, then insert their profiles.
--- Never expose the Supabase service_role/secret key in browser code or NEXT_PUBLIC_* variables.
--- Portfolio/work tables must receive their own RLS policies before they store real school data.
+-- Teachers and counselors can read their own works; school leaders can read works
+-- only from their own school; the global super admin can manage all works.
+create policy "Owners and school leaders read portfolio works"
+  on public.portfolio_works for select to authenticated
+  using (
+    owner_id = (select auth.uid())
+    or (
+      school_id = (select public.current_profile_school_id())
+      and (select public.current_profile_role()) in ('principal', 'deputy_principal', 'admin')
+    )
+    or (select public.current_profile_role()) = 'super_admin'
+  );
+
+create policy "Owners insert their own portfolio works"
+  on public.portfolio_works for insert to authenticated
+  with check (
+    owner_id = (select auth.uid())
+    and school_id = (select public.current_profile_school_id())
+    and (select public.current_profile_role()) in ('teacher', 'counselor')
+  );
+
+create policy "Owners update their own draft works"
+  on public.portfolio_works for update to authenticated
+  using (
+    owner_id = (select auth.uid())
+    and (select public.current_profile_role()) in ('teacher', 'counselor')
+    and status in ('draft', 'returned')
+  )
+  with check (
+    owner_id = (select auth.uid())
+    and school_id = (select public.current_profile_school_id())
+    and status in ('draft', 'returned')
+  );
+
+create policy "Super admins manage all portfolio works"
+  on public.portfolio_works for all to authenticated
+  using ((select public.current_profile_role()) = 'super_admin')
+  with check ((select public.current_profile_role()) = 'super_admin');
+
+-- Intentionally no public signup and no self-service role changes.
+-- Create Auth users through trusted admin provisioning and create a matching profiles row.
+-- Never expose service_role/secret keys in browser code or NEXT_PUBLIC_* variables.
