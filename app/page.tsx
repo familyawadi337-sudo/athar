@@ -103,14 +103,17 @@ export default function Home() {
       try {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+        if (!user) {
+          window.location.replace("/login");
+          return;
+        }
         const { data } = await supabase.from("profiles").select("full_name, role").eq("id", user.id).maybeSingle();
         if (data?.full_name) setProfileName(data.full_name);
         const roleLabels: Record<string, Role> = { teacher: "معلم", counselor: "مرشد", deputy_principal: "نائب مدير", principal: "مدير مدرسة", admin: "أدمن كلي" };
         if (data?.role && roleLabels[data.role]) setRole(roleLabels[data.role]);
         else setProfileName(user.email || "حساب المدرسة");
       } catch {
-        setProfileName("حساب المدرسة");
+        window.location.replace("/login");
       }
     };
     void loadProfile();
