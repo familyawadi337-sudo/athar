@@ -26,7 +26,7 @@ import {
   X,
 } from "lucide-react";
 
-type Role = "معلم" | "مرشد" | "نائب مدير" | "مدير مدرسة" | "إداري" | "Super Admin";
+type Role = "معلم" | "مرشد" | "نائب مدير" | "مدير مدرسة" | "أدمن كلي";
 type SectionId = "overview" | "works" | "teachers" | "achievements" | "assistant" | "settings";
 
 const categories = [
@@ -164,7 +164,7 @@ export default function Home() {
             >
               <Icon size={19} />
               <span>{label}</span>
-              {id === "teachers" && role === "إداري" ? <b className="count-pill">24</b> : null}
+              {id === "teachers" && role === "أدمن كلي" ? <b className="count-pill">24</b> : null}
             </button>
           ))}
         </nav>
